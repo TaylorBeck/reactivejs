@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReactiveJS</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .task { margin-bottom: 10px; }
+        .completed { text-decoration: line-through; color: #888; }
+    </style>
+</head>
+<body>
+    <h1>Advanced ReactiveJS Demo: Todo List</h1>
+    
+    <div id="app"></div>
+    
+    <script src="ReactiveJS.js"></script>
+    <script>
+        // Initialize the app
+        app.createState({
+            tasks: [
+                { id: 1, text: "Learn ReactiveJS", completed: false },
+                { id: 2, text: "Build a todo app", completed: false },
+                { id: 3, text: "Master web development", completed: false }
+            ],
+            newTask: ""
+        });
+
+        // Computed property
+        app.computed('completedCount', state => 
+            state.tasks.filter(task => task.completed).length
+        );
+
+        // Component template
+        const todoTemplate = `
+            <div>
+                <input type="text" id="newTask" data-bind="newTask">
+                <button id="addTask">Add Task</button>
+                <ul>
+                    {{tasks}}
+                </ul>
+                <p>Completed tasks: <span data-bind="completedCount"></span></p>
+            </div>
+        `;
+
+        // Render component
+        const renderTodo = app.component('#app', todoTemplate, {
+            tasks: app.state.tasks,
+            completedCount: app.state.completedCount
+        });
+
+        // Event listeners
+        app.on('click', '#addTask', () => {
+            if (app.state.newTask.trim()) {
+                app.state.tasks.push({
+                    id: Date.now(),
+                    text: app.state.newTask,
+                    completed: false
+                });
+                app.state.newTask = "";
+                renderTodo();
+            }
+        });
+
+        app.on('keyup', '#newTask', (e) => {
+            if (e.key === 'Enter') {
+                document.querySelector('#addTask').click();
+            }
+        });
+
+        // Custom binding with formatter
+        app.bind('#app', 'tasks', tasks => 
+            tasks.map(task => `
+                <li class="task ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+                    <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                    ${task.text}
+                    <button class="delete">Delete</button>
+                </li>
+            `).join('')
+        );
+
+        // Event delegation for dynamic elements
+        document.querySelector('#app').addEventListener('click', (e) => {
+            if (e.target.matches('input[type="checkbox"]')) {
+                const taskId = parseInt(e.target.closest('.task').dataset.id);
+                const task = app.state.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = e.target.checked;
+                    app.state.tasks = [...app.state.tasks]; // Trigger update
+                }
+            } else if (e.target.matches('.delete')) {
+                const taskId = parseInt(e.target.closest('.task').dataset.id);
+                app.state.tasks = app.state.tasks.filter(t => t.id !== taskId);
+                renderTodo();
+            }
+        });
+    </script>
+</body>
+</html>
