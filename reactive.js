@@ -32,7 +32,7 @@ class ReactiveJS {
       if (formatter) {
         value = formatter(value);
       }
-      element.textContent = value;
+      element.innerHTML = value;
     }
   }
 
@@ -44,17 +44,21 @@ class ReactiveJS {
   }
 
   computed(key, computeFunc) {
-    this.computedProperties.set(key, computeFunc);
     Object.defineProperty(this.state, key, {
       get: () => computeFunc(this.state),
       enumerable: true,
+      configurable: true
     });
+    this.computedProperties.set(key, computeFunc);
   }
 
   updateComputedProperties() {
     for (let [key, computeFunc] of this.computedProperties) {
-      this.state[key] = computeFunc(this.state);
-      this.updateDOM(key);
+      const value = computeFunc(this.state);
+      if (this.elements.has(key)) {
+        const { element, formatter } = this.elements.get(key);
+        element.innerHTML = formatter ? formatter(value) : value;
+      }
     }
   }
 
@@ -67,7 +71,11 @@ class ReactiveJS {
       };
       render();
       for (let key in data) {
-        this.bind(`${selector} [data-bind="${key}"]`, key);
+        if (this.computedProperties.has(key)) {
+          this.bind(`${selector} [data-bind="${key}"]`, key);
+        } else {
+          this.bind(`${selector} [data-bind="${key}"]`, key);
+        }
       }
       return render;
     }
